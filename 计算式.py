@@ -40,7 +40,7 @@ def calculate_steel_coil_info(weight, thickness, width, inner_diameter):
     return length_m, outer_diameter_mm
 
 # 示例输入
-weight = 10000  # kg
+weight = 10200  # kg
 thickness = 1  # mm
 width = 1000  # mm
 inner_diameter = 610  # mm
