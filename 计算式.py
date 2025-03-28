@@ -1,71 +1,75 @@
 import math
+from typing import Tuple
 
-# 定义钢的密度，单位：g/cm³
-STEEL_DENSITY = 7.85
+# 常量命名全大写，添加单位注释
+STEEL_DENSITY_G_PER_CM3 = 7.85  # 钢的密度 (g/cm³)
+MM_TO_CM = 0.1                  # 毫米转厘米系数
+KG_TO_G = 1000                  # 千克转克系数
+CM_TO_M = 0.01                  # 厘米转米系数
 
-def mm_to_cm(value):
-    """
-    将毫米转换为厘米
-    :param value: 毫米值
-    :return: 厘米值
-    """
-    return value / 10
+def convert_units(value: float, conversion_factor: float) -> float:
+    """通用单位转换函数"""
+    return value * conversion_factor
 
-def kg_to_g(value):
-    """
-    将千克转换为克
-    :param value: 千克值
-    :return: 克值
-    """
-    return value * 1000
-
-def calculate_steel_coil_info(weight, thickness, width, inner_diameter):
+def calculate_steel_coil_info(
+    weight_kg: float,
+    thickness_mm: float,
+    width_mm: float,
+    inner_diameter_mm: float
+) -> Tuple[float, float]:
     """
     计算钢卷的长度和外径
-    :param weight: 钢卷的重量，单位：kg
-    :param thickness: 钢卷的厚度，单位：mm
-    :param width: 钢卷的宽度，单位：mm
-    :param inner_diameter: 钢卷的内径，单位：mm
-    :return: 钢卷的长度（单位：m）和外径（单位：mm）
+
+    Args:
+        weight_kg: 钢卷重量 (kg)
+        thickness_mm: 钢材厚度 (mm)
+        width_mm: 钢卷宽度 (mm)
+        inner_diameter_mm: 钢卷内径 (mm)
+
+    Returns:
+        Tuple[长度(m), 外径(mm)]
+
+    Raises:
+        ValueError: 如果任何参数不是正数
     """
-    # 输入参数校验
-    if weight <= 0 or thickness <= 0 or width <= 0 or inner_diameter <= 0:
-        raise ValueError("输入的参数必须为正数")
-    
-    # 单位转换
-    weight_g = kg_to_g(weight)
-    thickness_cm = mm_to_cm(thickness)
-    width_cm = mm_to_cm(width)
-    inner_diameter_cm = mm_to_cm(inner_diameter)
+    # 参数验证
+    if not all(x > 0 for x in (weight_kg, thickness_mm, width_mm, inner_diameter_mm)):
+        raise ValueError("所有参数必须为正数")
 
-    # 计算钢卷的体积，单位：cm³
-    volume = weight_g / STEEL_DENSITY
+    # 批量单位转换 (避免重复代码)
+    weight_g = convert_units(weight_kg, KG_TO_G)
+    thickness_cm = convert_units(thickness_mm, MM_TO_CM)
+    width_cm = convert_units(width_mm, MM_TO_CM)
+    inner_diameter_cm = convert_units(inner_diameter_mm, MM_TO_CM)
 
-    # 计算钢卷圆环的横截面积，单位：cm²
-    cross_section_area = volume / width_cm
+    # 计算体积 (cm³)
+    volume_cm3 = weight_g / STEEL_DENSITY_G_PER_CM3
 
-    # 计算外径（单位：cm），根据圆环面积公式 S = π * ((D/2)² - (d/2)²)，推导出 D = sqrt(4*S/π + d²)
-    outer_diameter_cm = math.sqrt(4 * cross_section_area / math.pi + inner_diameter_cm ** 2)
-    # 将外径从 cm 转换为 mm
-    outer_diameter_mm = outer_diameter_cm * 10
+    # 计算长度 (优化公式，减少中间变量)
+    length_m = convert_units(
+        volume_cm3 / (thickness_cm * width_cm),
+        CM_TO_M
+    )
 
-    # 计算钢卷的长度，单位：cm
-    length_cm = volume / (thickness_cm * width_cm)
-    # 将长度从 cm 转换为 m
-    length_m = length_cm / 100
+    # 计算外径 (使用命名变量提高可读性)
+    cross_section_area_cm2 = volume_cm3 / width_cm
+    outer_diameter_cm = math.sqrt(
+        (4 * cross_section_area_cm2 / math.pi) + inner_diameter_cm**2
+    )
+    outer_diameter_mm = convert_units(outer_diameter_cm, 1/MM_TO_CM)
 
-    return length_m, outer_diameter_mm
+    return round(length_m, 2), round(outer_diameter_mm, 2)
 
-# 示例输入
-weight = 10200  # kg
-thickness = 1  # mm
-width = 1000  # mm
-inner_diameter = 610  # mm
-
-try:
-    # 调用函数计算钢卷的长度和外径
-    length, outer_diameter = calculate_steel_coil_info(weight, thickness, width, inner_diameter)
-    print(f"钢卷的长度为: {length:.2f} m")
-    print(f"钢卷的外径为: {outer_diameter:.2f} mm")
-except ValueError as e:
-    print(f"输入错误: {e}")
+# 示例用法
+if __name__ == "__main__":
+    try:
+        length, diameter = calculate_steel_coil_info(
+            weight_kg=10200,
+            thickness_mm=1,
+            width_mm=1000,
+            inner_diameter_mm=610
+        )
+        print(f"钢卷长度: {length:,} m")      # 使用千位分隔符
+        print(f"钢卷外径: {diameter:,.1f} mm") # 固定1位小数
+    except ValueError as e:
+        print(f"错误: {e}")
